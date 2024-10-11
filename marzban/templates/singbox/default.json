@@ -1,0 +1,168 @@
+{
+    "log": {
+    "level": "warn",
+    "timestamp": true
+    },
+    "dns": {
+        "servers": [
+            {
+                "tag": "dns_proxy",
+                "address": "https://1.1.1.1/dns-query",
+                "address_resolver": "dns_direct",
+                "strategy": "prefer_ipv4",
+                "detour": "direct"
+            },
+            {
+                "tag": "dns_direct",
+                "address": "https://8.8.8.8/dns-query",
+                "strategy": "prefer_ipv4",
+                "detour": "direct"
+            }
+        ],
+        "rules": [
+            {
+                "outbound": "any",
+                "server": "dns_direct"
+            }
+        ],
+        "independent_cache": true
+    },
+    "inbounds": [
+        {
+            "type": "tun",
+            "mtu": 1500,
+            "address": "172.19.0.1/30",
+            "auto_route": true,
+            "strict_route": true,
+            "stack": "mixed",
+            "sniff": true
+        }
+    ],
+    "outbounds": [
+        {
+            "type": "selector",
+            "tag": "Internet",
+            "outbounds": null
+        },
+        {
+            "type": "urltest",
+            "tag": "Best Latency",
+            "outbounds": null,
+            "url": "https://www.gstatic.com/generate_204",
+            "interval": "1m0s"
+        },
+        {
+            "type": "direct",
+            "tag": "direct"
+        },
+        {
+            "type": "block",
+            "tag": "block"
+        },
+        {
+            "type": "dns",
+            "tag": "dns-out"
+        }
+    ],
+    "route": {
+        "rule_set": [
+            {
+                "type": "remote",
+                "tag": "geosite-private",
+                "format": "binary",
+                "url": "https://github.com/SagerNet/sing-geosite/raw/rule-set/geosite-private.srs",
+                "download_detour": "direct"
+            },
+            {
+                "type": "remote",
+                "tag": "geosite-category-gov-ru",
+                "format": "binary",
+                "url": "https://github.com/SagerNet/sing-geosite/raw/rule-set/geosite-category-gov-ru.srs",
+                "download_detour": "direct"
+            },
+            {
+                "type": "remote",
+                "tag": "geosite-yandex",
+                "format": "binary",
+                "url": "https://github.com/SagerNet/sing-geosite/raw/rule-set/geosite-yandex.srs",
+                "download_detour": "direct"
+            },
+            {
+                "type": "remote",
+                "tag": "geosite-mailru",
+                "format": "binary",
+                "url": "https://github.com/SagerNet/sing-geosite/raw/rule-set/geosite-mailru.srs",
+                "download_detour": "direct"
+            },
+            {
+                "type": "remote",
+                "tag": "geosite-vk",
+                "format": "binary",
+                "url": "https://github.com/SagerNet/sing-geosite/raw/rule-set/geosite-vk.srs",
+                "download_detour": "direct"
+            },
+            {
+                "type": "remote",
+                "tag": "geoip-ru",
+                "format": "binary",
+                "url": "https://github.com/SagerNet/sing-geoip/raw/rule-set/geoip-ru.srs",
+                "download_detour": "direct"
+            },
+            {
+                "type": "remote",
+                "tag": "geosite-category-ru",
+                "format": "binary",
+                "url": "https://github.com/SagerNet/sing-geosite/raw/rule-set/geosite-category-ru.srs",
+                "download_detour": "direct"
+            }
+        ],
+        "rules": [
+            {
+                "protocol": "dns",
+                "outbound": "dns-out"
+            },
+            {
+                "protocol": "quic",
+                "outbound": "block"
+            },
+            {
+                "domain": [
+                    "my_domain.com",
+                    "habr.com"
+                ],
+                "domain_suffix": [
+                    ".ru",
+                    ".xn--p1ai",
+                    ".su",
+                    ".my_domain.com"
+                ],
+                "rule_set": [
+                    "geosite-private",
+                    "geosite-category-ru",
+                    "geosite-category-gov-ru",
+                    "geosite-yandex",
+                    "geosite-mailru",
+                    "geosite-vk"
+                ],
+                "outbound": "direct"
+            },
+            {
+                "ip_is_private": true,
+                "rule_set": "geoip-ru",
+                "outbound": "direct"
+            },
+            {
+                "process_name": [
+                    "chrome.exe",
+                    "Arc.exe",
+                    "Discord.exe"
+                ],
+                "outbound": "Internet"
+            }
+    ],
+    "final": "",
+    "auto_detect_interface": true
+    },
+    "experimental": {}
+}
+

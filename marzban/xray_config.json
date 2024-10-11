@@ -1,0 +1,92 @@
+{
+    "log": {
+        "loglevel": "error",
+        "error": "/usr/local/share/xray/error.log"
+    },
+    "routing": {
+        "domainStrategy": "IPIfNonMatch",
+        "rules": [
+            {
+                "type": "field",
+                "ip": [
+                    "geoip:ru"
+                ],
+                "outboundTag": "block"
+            },
+            {
+                "type": "field",
+                "domain": [
+                    "geosite:category-ru",
+                    "geosite:category-gov-ru",
+                    "geosite:mailru",
+                    "geosite:yandex",
+                    "geosite:vk"
+                ],
+                "outboundTag": "block"
+            }
+        ]
+    },
+    "dns": {
+        "servers": [
+            "8.8.8.8"
+        ]
+    },
+    "inbounds": [
+        {
+            "tag": "VLESS TCP TLS",
+            "listen": "0.0.0.0",
+            "port": 443,
+            "protocol": "vless",
+            "settings": {
+                "clients": [],
+                "decryption": "none",
+                "fallbacks": [
+                    {
+                        "dest": "nginx:443",
+                        "xver": 1
+                    }
+                ]
+            },
+            "streamSettings": {
+                "network": "tcp",
+                "security": "tls",
+                "tlsSettings": {
+                    "rejectUnknownSni": true,
+                    "minVersion": "1.3",
+                    "certificates": [
+                        {
+                            "ocspStapling": 3600,
+                            "certificateFile": "/etc/ssl/certs/fullchain.pem",
+                            "keyFile": "/etc/ssl/certs/key.pem"
+                        }
+                    ]
+                }
+            },
+            "sniffing": {
+                "enabled": true,
+                "destOverride": [
+                    "http",
+                    "tls"
+                ]
+            }
+        }
+    ],
+    "outbounds": [
+        {
+            "protocol": "freedom",
+            "tag": "direct"
+        },
+        {
+            "protocol": "blackhole",
+            "tag": "block"
+        }
+    ],
+    "policy": {
+        "levels": {
+            "0": {
+                "handshake": 3,
+                "connIdle": 289
+            }
+        }
+    }
+}

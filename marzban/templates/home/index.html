@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Random Cat Images</title>
+    <link rel="icon" href="https://cataas.com/cat?filter=mono&type=square" type="image/png">
+    <style>
+      body {
+        background: #5c4531;
+        color: #f4e3c1;
+        font-family: Arial, sans-serif;
+      }
+
+      .header-content {
+        text-align: center;
+      }
+
+      .cats {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        grid-template-rows: repeat(5, 1fr);
+        gap: 20px;
+        padding: 20px;
+      }
+
+      .random_cat {
+        width: 100%;
+        height: 320px;
+        border: 5px solid #7a4e2d;
+        padding: 10px;
+        box-sizing: border-box;
+        background: #8b5e3c;
+        border-radius: 10px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+      }
+
+      img {
+        width: 100%;
+        height: 80%;
+        object-fit: cover;
+        border: 2px solid #5a3e2b;
+        border-radius: 5px;
+      }
+
+      .caption {
+        margin-top: 17px;
+        font-size: 1rem;
+        text-align: center;
+        color: #f9d8a7;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="header-content">
+      <h1>Welcome to the Random Cat Gallery</h1>
+    </header>
+    <div class="container"></div>
+
+    <script>
+      const url = "https://cataas.com/api/cats?skip=0&limit=25";
+      const section = document.querySelector(".container");
+      const captions = [
+        "You're pawsome!",
+        "Have a purr-fect day!",
+        "Keep calm and love cats!",
+        "Feeling feline fine!",
+        "Just a little meow-ment of joy!",
+        "Paws and reflect!",
+        "You're the cat's whiskers!",
+        "Live long and paw-sper!",
+        "Cat-titude is everything!",
+        "Meowgical moments!",
+        "The fluffiest friend!",
+        "Stay pawsitive!",
+        "You had me at meow!",
+        "A meow-tastic day!",
+        "Cuteness overload!",
+        "Born to be wild... and fluffy!",
+        "Purr-haps the cutest!",
+        "Love at first meow!",
+        "Whisker wonders!",
+        "Purring just for you!",
+        "Stay curious!",
+        "The purr-fect companion!",
+        "Catch the catitude!",
+        "Pawsitively adorable!",
+        "Furry and fabulous!"
+      ];
+
+      randomCatPhoto = (json) => {
+        section.classList.add("cats");
+
+        json.forEach((cat, index) => {
+          let photo = `https://cataas.com/cat/${cat._id}`;
+
+          let imageContainer = document.createElement("div");
+          imageContainer.classList.add("random_cat");
+
+          
+
+          let image = document.createElement("img");
+          image.src = photo;
+          image.alt = "Random Cat";
+
+          let caption = document.createElement("div");
+          caption.classList.add("caption");
+          caption.textContent = captions[index % captions.length];
+
+          imageContainer.appendChild(image);
+          imageContainer.appendChild(caption);
+          section.appendChild(imageContainer);
+        });
+      };
+
+      async function getRandomCats() {
+        section.innerHTML = "";
+        try {
+          const response = await fetch(url);
+          const json = await response.json();
+          console.log("JSON:", json);
+          randomCatPhoto(json);
+        } catch (e) {
+          console.log("This is an error");
+          console.log(e);
+        }
+      }
+
+      // Load multiple cat images on page load
+      window.addEventListener("load", getRandomCats);
+    </script>
+  </body>
+</html>
