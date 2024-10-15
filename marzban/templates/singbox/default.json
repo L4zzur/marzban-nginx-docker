@@ -128,7 +128,8 @@
             {
                 "domain": [
                     "my_domain.com",
-                    "habr.com"
+                    "habr.com",
+                    "4pda.to"
                 ],
                 "domain_suffix": [
                     ".ru",
@@ -155,7 +156,8 @@
                 "process_name": [
                     "chrome.exe",
                     "Arc.exe",
-                    "Discord.exe"
+                    "Discord.exe",
+                    "Telegram.exe"
                 ],
                 "outbound": "Internet"
             }
