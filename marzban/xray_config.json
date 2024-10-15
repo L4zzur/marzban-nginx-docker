@@ -8,6 +8,11 @@
         "rules": [
             {
                 "type": "field",
+                "domain": "domain:my_domain.com",
+                "outboundTag": "webserver"
+            },
+            {
+                "type": "field",
                 "ip": [
                     "geoip:ru"
                 ],
@@ -79,6 +84,14 @@
         {
             "protocol": "blackhole",
             "tag": "block"
+        },
+        {
+            "protocol": "freedom",
+            "tag": "webserver",
+            "settings": {
+                "redirect": "127.0.0.1:443",
+                "proxy_protocol": 0
+            }
         }
     ],
     "policy": {
