@@ -397,6 +397,12 @@ replace_placeholders() {
     echo_info "All placeholder replacements completed successfully."
 }
 
+chmod_scripts() {
+    echo_info "Changing permissions for scripts..."
+    cd ~/services
+    chmod +x *.sh
+}
+
 check_dependencies
 get_user_input
 clone_repository
@@ -406,5 +412,4 @@ set_default_ca
 issue_certificate
 download_and_extract_xray
 replace_placeholders
-
-chmod +x *.sh
+chmod_scripts
