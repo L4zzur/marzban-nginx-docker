@@ -13,14 +13,6 @@ echo_error() {
     echo -e "\e[31m[ERROR]\e[0m $1" >&2
 }
 
-check_if_running_as_root() {
-    # If you want to run as another user, please modify $EUID to be owned by this user
-    if [[ "$EUID" -ne '0' ]]; then
-        echo_error "This script must be run as root. Please run it again with sudo."
-        exit 1
-    fi
-}
-
 # Detect the operating system
 detect_os() {
     if [ -f /etc/lsb-release ]; then
@@ -405,7 +397,6 @@ replace_placeholders() {
     echo_info "All placeholder replacements completed successfully."
 }
 
-check_if_running_as_root
 check_dependencies
 get_user_input
 clone_repository
