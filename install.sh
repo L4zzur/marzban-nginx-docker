@@ -406,3 +406,5 @@ set_default_ca
 issue_certificate
 download_and_extract_xray
 replace_placeholders
+
+chmod +x *.sh
