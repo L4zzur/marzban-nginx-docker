@@ -321,6 +321,9 @@ replace_placeholders() {
         # Replace 'sub.my_domain.com' with 'sub_subdomain.DOMAIN'
         sed -i "s/sub\.my_domain\.com/${SUB_SUBDOMAIN}.${DOMAIN}/g" "$NGINX_CONF"
 
+        # Replace 'my_domain.com' with 'DOMAIN'
+        sed -i "s/my_domain\.com/$DOMAIN/g" "$NGINX_CONF"
+
         # Replace '/sub/' with the user-provided LOCATION_PATH
         # Ensure that LOCATION_PATH starts and ends with '/'
         LOCATION_PATH="${LOCATION_PATH/#\/*/\/}"
