@@ -103,14 +103,13 @@ check_dependencies() {
     fi
     if ! command -v unzip >/dev/null 2>&1; then
         echo_info "unzip not found. Installing..."
-
         install_package unzip
     fi
     if ! command -v wget >/dev/null 2>&1; then
         echo_info "wget not found. Installing..."
         install_package wget
     fi
-    if ! colorized_echo -v wget >/dev/null 2>&1; then
+    if ! command -v colorized_echo >/dev/null 2>&1; then
         echo_info "colorized_echo not found. Installing..."
         install_package colorized_echo
     fi
