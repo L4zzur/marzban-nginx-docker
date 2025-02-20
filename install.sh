@@ -3,14 +3,17 @@
 
 set -e  # Exit immediately if a command exits with a non-zero status
 
-# Function to display informational messages
-echo_info() {
-    echo -e "\e[32m[INFO]\e[0m $1"
-}
-
-# Function to display error messages
-echo_error() {
-    echo -e "\e[31m[ERROR]\e[0m $1" >&2
+# Function to display colorized messages
+colorized_echo() {
+    local color=$1
+    local message=$2
+    case "$color" in
+        red) echo -e "\e[31m[ERROR]\e[0m $message" ;;
+        green) echo -e "\e[32m[SUCCESS]\e[0m $message" ;;
+        yellow) echo -e "\e[33m[WARNING]\e[0m $message" ;;
+        blue) echo -e "\e[34m[INFO]\e[0m $message" ;;
+        *) echo "$message" ;;
+    esac
 }
 
 # Detect the operating system
@@ -82,35 +85,35 @@ install_package () {
 
 # Function to install Docker
 install_docker() {
-    echo_info "Installing Docker..."
+    colorized_echo blue "Installing Docker..."
     curl -fsSL https://get.docker.com | sh
-    echo_info "Docker installed successfully."
+    colorized_echo blue "Docker installed successfully."
 }
 
 # Function to check for required dependencies
 check_dependencies() {
     if ! command -v jq >/dev/null 2>&1; then
-        echo_info "jq not found. Installing..."
+        colorized_echo blue "jq not found. Installing..."
         install_package jq
     fi
     if ! command -v curl >/dev/null 2>&1; then
-        echo_info "curl not found. Installing..."
+        colorized_echo blue "curl not found. Installing..."
         install_package curl
     fi
     if ! command -v docker >/dev/null 2>&1; then
-        echo_info "Docker not found. Installing..."
+        colorized_echo blue "Docker not found. Installing..."
         install_docker
     fi
     if ! command -v unzip >/dev/null 2>&1; then
-        echo_info "unzip not found. Installing..."
+        colorized_echo blue "unzip not found. Installing..."
         install_package unzip
     fi
     if ! command -v wget >/dev/null 2>&1; then
-        echo_info "wget not found. Installing..."
+        colorized_echo blue "wget not found. Installing..."
         install_package wget
     fi
     if ! command -v colorized_echo >/dev/null 2>&1; then
-        echo_info "colorized_echo not found. Installing..."
+        colorized_echo blue "colorized_echo not found. Installing..."
         install_package colorized_echo
     fi
 }
@@ -152,10 +155,10 @@ get_user_input() {
 
 # Function to clone the repository
 clone_repository() {
-    echo_info "Cloning marzban-nginx-docker repository into ~/services..."
+    colorized_echo blue "Cloning marzban-nginx-docker repository into ~/services..."
     cd ~
     if [ -d "services" ]; then
-        echo_info "Directory 'services' already exists. Skipping clone."
+        colorized_echo blue "Directory 'services' already exists. Skipping clone."
     else
         git clone https://github.com/L4zzur/marzban-nginx-docker services
     fi
@@ -177,9 +180,9 @@ detect_compose() {
 
 # Function to install acme.sh
 install_acme_sh() {
-    echo_info "Installing acme.sh..."
+    colorized_echo blue "Installing acme.sh..."
     if [ -d "$HOME/.acme.sh" ]; then
-        echo_info "acme.sh is already installed. Skipping installation."
+        colorized_echo blue "acme.sh is already installed. Skipping installation."
     else
         curl https://get.acme.sh | sh -s email="$ACME_EMAIL"
     fi
@@ -187,26 +190,26 @@ install_acme_sh() {
 
 # Function to set up account.conf with Cloudflare credentials
 setup_account_conf() {
-    echo_info "Setting up ~/.acme.sh/account.conf with Cloudflare API Key and Email..."
+    colorized_echo blue "Setting up ~/.acme.sh/account.conf with Cloudflare API Key and Email..."
     CONFIG_FILE="$HOME/.acme.sh/account.conf"
 
     if [ -f "$CONFIG_FILE" ]; then
         # Update CF_Key if exists, else append
         if grep -q "^export CF_Key=" "$CONFIG_FILE"; then
             sed -i "s/^export CF_Key=.*/export CF_Key=\"$CF_API_KEY\"/" "$CONFIG_FILE"
-            echo_info "Updated CF_Key in account.conf."
+            colorized_echo blue "Updated CF_Key in account.conf."
         else
             echo "export CF_Key=\"$CF_API_KEY\"" >> "$CONFIG_FILE"
-            echo_info "Added CF_Key to account.conf."
+            colorized_echo blue "Added CF_Key to account.conf."
         fi
 
         # Update CF_Email if exists, else append
         if grep -q "^export CF_Email=" "$CONFIG_FILE"; then
             sed -i "s/^export CF_Email=.*/export CF_Email=\"$CF_EMAIL\"/" "$CONFIG_FILE"
-            echo_info "Updated CF_Email in account.conf."
+            colorized_echo blue "Updated CF_Email in account.conf."
         else
             echo "export CF_Email=\"$CF_EMAIL\"" >> "$CONFIG_FILE"
-            echo_info "Added CF_Email to account.conf."
+            colorized_echo blue "Added CF_Email to account.conf."
         fi
     else
         # Create the config file with both variables
@@ -214,22 +217,22 @@ setup_account_conf() {
 CF_Key="$CF_API_KEY"
 CF_Email="$CF_EMAIL"
 EOF
-        echo_info "Created account.conf with CF_Key and CF_Email."
+        colorized_echo blue "Created account.conf with CF_Key and CF_Email."
     fi
 
     chmod 600 "$CONFIG_FILE"
-    echo_info "Set permissions for account.conf."
+    colorized_echo blue "Set permissions for account.conf."
 }
 
 # Function to set Let's Encrypt as the default CA
 set_default_ca() {
-    echo_info "Setting Let's Encrypt as the default CA..."
+    colorized_echo blue "Setting Let's Encrypt as the default CA..."
     ~/.acme.sh/acme.sh --set-default-ca --server letsencrypt
 }
 
 # Function to issue a wildcard certificate
 issue_certificate() {
-    echo_info "Issuing wildcard certificate for domain $DOMAIN..."
+    colorized_echo blue "Issuing wildcard certificate for domain $DOMAIN..."
     ~/.acme.sh/acme.sh --issue --dns dns_cf \
         -d "$DOMAIN" \
         -d "*.$DOMAIN" \
@@ -237,16 +240,16 @@ issue_certificate() {
         --fullchain-file ~/services/certs/fullchain.pem
 
     if [ -f ~/services/certs/key.pem ] && [ -f ~/services/certs/fullchain.pem ]; then
-        echo_info "Certificates successfully created and saved in ~/services/certs/"
+        colorized_echo blue "Certificates successfully created and saved in ~/services/certs/"
     else
-        echo_error "Failed to issue certificates. Please check the output above for details."
+        colorized_echo red "Failed to issue certificates. Please check the output above for details."
         exit 1
     fi
 }
 
 # Function to download and extract Xray-core
 download_and_extract_xray() {
-    echo_info "Downloading and extracting Xray-core..."
+    colorized_echo blue "Downloading and extracting Xray-core..."
 
     # Determine the architecture
     ARCH=$(uname -m)
@@ -260,7 +263,7 @@ download_and_extract_xray() {
             DOWNLOAD_URL="https://github.com/XTLS/Xray-core/releases/latest/download/Xray-linux-$ARCH_SUFFIX.zip"
             ;;
         *)
-            echo_error "Architecture '$ARCH' is not supported. Please download Xray-core manually."
+            colorized_echo red "Architecture '$ARCH' is not supported. Please download Xray-core manually."
             exit 1
             ;;
     esac
@@ -270,26 +273,26 @@ download_and_extract_xray() {
     ZIP_FILE="$TMP_DIR/Xray-linux-$ARCH_SUFFIX.zip"
 
     # Download Xray-core
-    echo_info "Downloading Xray-core from $DOWNLOAD_URL"
+    colorized_echo blue "Downloading Xray-core from $DOWNLOAD_URL"
     if ! curl -L -o "$ZIP_FILE" "$DOWNLOAD_URL"; then
-        echo_error "Download failed! Please check your network or try again."
+        colorized_echo red "Download failed! Please check your network or try again."
         rm -rf "$TMP_DIR"
         exit 1
     fi
 
     # Extract Xray-core to services/xray
-    echo_info "Extracting Xray-core to ~/services/xray..."
+    colorized_echo blue "Extracting Xray-core to ~/services/xray..."
     unzip -q "$ZIP_FILE" -d ~/services/xray/
 
     # Clean up
     rm -rf "$TMP_DIR"
-    echo_info "Xray-core downloaded and extracted successfully."
+    colorized_echo blue "Xray-core downloaded and extracted successfully."
 }
 
 
 # Function to replace various placeholders in configuration files and .env
 replace_placeholders() {
-    echo_info "Replacing placeholders with provided domain and credentials..."
+    colorized_echo blue "Replacing placeholders with provided domain and credentials..."
 
     # Define the configuration files to modify
     CONFIG_FILES=(
@@ -300,18 +303,18 @@ replace_placeholders() {
     # Replace 'my_domain.com' with the actual domain in specified configuration files
     for file in "${CONFIG_FILES[@]}"; do
         if [ -f "$file" ]; then
-            echo_info "Updating $file..."
+            colorized_echo blue "Updating $file..."
             sed -i "s/my_domain\.com/$DOMAIN/g" "$file"
-            echo_info "Updated $file successfully."
+            colorized_echo blue "Updated $file successfully."
         else
-            echo_error "File $file does not exist. Skipping."
+            colorized_echo red "File $file does not exist. Skipping."
         fi
     done
 
     # Replace 'panel.my_domain.com' and 'sub.my_domain.com' in nginx.conf
     NGINX_CONF="nginx/nginx.conf"
     if [ -f "$NGINX_CONF" ]; then
-        echo_info "Updating nginx.conf with domain-specific entries..."
+        colorized_echo blue "Updating nginx.conf with domain-specific entries..."
         # Replace 'panel.my_domain.com' with 'panel_subdomain.DOMAIN'
         sed -i "s/panel\.my_domain\.com/${PANEL_SUBDOMAIN}.${DOMAIN}/g" "$NGINX_CONF"
 
@@ -324,60 +327,60 @@ replace_placeholders() {
         LOCATION_PATH="${LOCATION_PATH%\/}/"
         sed -i "s|/sub/|$LOCATION_PATH|g" "$NGINX_CONF"
 
-        echo_info "nginx.conf updated successfully."
+        colorized_echo blue "nginx.conf updated successfully."
     else
-        echo_error "nginx.conf not found at $NGINX_CONF. Skipping nginx placeholders replacement."
+        colorized_echo red "nginx.conf not found at $NGINX_CONF. Skipping nginx placeholders replacement."
     fi
 
     # Replace placeholders in .env file
     ENV_FILE="marzban/.env"
     if [ -f "$ENV_FILE" ]; then
-        echo_info "Updating .env file with user credentials and subscription paths..."
+        colorized_echo blue "Updating .env file with user credentials and subscription paths..."
 
         # Replace SUDO_USERNAME
         if grep -q "^SUDO_USERNAME=" "$ENV_FILE"; then
             sed -i "s/^SUDO_USERNAME=.*/SUDO_USERNAME=\"$SUDO_USERNAME\"/" "$ENV_FILE"
-            echo_info "Updated SUDO_USERNAME in .env."
+            colorized_echo blue "Updated SUDO_USERNAME in .env."
         else
             echo "SUDO_USERNAME=\"$SUDO_USERNAME\"" >> "$ENV_FILE"
-            echo_info "Added SUDO_USERNAME to .env."
+            colorized_echo blue "Added SUDO_USERNAME to .env."
         fi
 
         # Replace SUDO_PASSWORD
         if grep -q "^SUDO_PASSWORD=" "$ENV_FILE"; then
             sed -i "s/^SUDO_PASSWORD=.*/SUDO_PASSWORD=\"$SUDO_PASSWORD\"/" "$ENV_FILE"
-            echo_info "Updated SUDO_PASSWORD in .env."
+            colorized_echo blue "Updated SUDO_PASSWORD in .env."
         else
             echo "SUDO_PASSWORD=\"$SUDO_PASSWORD\"" >> "$ENV_FILE"
-            echo_info "Added SUDO_PASSWORD to .env."
+            colorized_echo blue "Added SUDO_PASSWORD to .env."
         fi
 
         # Replace XRAY_SUBSCRIPTION_URL_PREFIX
         XRAY_SUBSCRIPTION_URL_PREFIX="https://${SUB_SUBDOMAIN}.${DOMAIN}"
         if grep -q "^XRAY_SUBSCRIPTION_URL_PREFIX=" "$ENV_FILE"; then
             sed -i "s|^XRAY_SUBSCRIPTION_URL_PREFIX=.*|XRAY_SUBSCRIPTION_URL_PREFIX=\"$XRAY_SUBSCRIPTION_URL_PREFIX\"|" "$ENV_FILE"
-            echo_info "Updated XRAY_SUBSCRIPTION_URL_PREFIX in .env."
+            colorized_echo blue "Updated XRAY_SUBSCRIPTION_URL_PREFIX in .env."
         else
             echo "XRAY_SUBSCRIPTION_URL_PREFIX=\"$XRAY_SUBSCRIPTION_URL_PREFIX\"" >> "$ENV_FILE"
-            echo_info "Added XRAY_SUBSCRIPTION_URL_PREFIX to .env."
+            colorized_echo blue "Added XRAY_SUBSCRIPTION_URL_PREFIX to .env."
         fi
 
         # Replace XRAY_SUBSCRIPTION_PATH with LOCATION_PATH without slashes
         if grep -q "^XRAY_SUBSCRIPTION_PATH=" "$ENV_FILE"; then
             sed -i "s/^XRAY_SUBSCRIPTION_PATH=.*/XRAY_SUBSCRIPTION_PATH=\"$XRAY_SUBSCRIPTION_PATH\"/" "$ENV_FILE"
-            echo_info "Updated XRAY_SUBSCRIPTION_PATH in .env."
+            colorized_echo blue "Updated XRAY_SUBSCRIPTION_PATH in .env."
         else
             echo "XRAY_SUBSCRIPTION_PATH=\"$XRAY_SUBSCRIPTION_PATH\"" >> "$ENV_FILE"
-            echo_info "Added XRAY_SUBSCRIPTION_PATH to .env."
+            colorized_echo blue "Added XRAY_SUBSCRIPTION_PATH to .env."
         fi
     else
-        echo_error ".env file not found at $ENV_FILE. Skipping .env placeholders replacement."
+        colorized_echo red ".env file not found at $ENV_FILE. Skipping .env placeholders replacement."
     fi
 
     # Insert Support and Instruction URLs into subscription/index.html
     SUBSCRIPTION_HTML="marzban/templates/subscription/index.html"
     if [ -f "$SUBSCRIPTION_HTML" ]; then
-        echo_info "Inserting Support and Instruction URLs into $SUBSCRIPTION_HTML..."
+        colorized_echo blue "Inserting Support and Instruction URLs into $SUBSCRIPTION_HTML..."
 
         # Replace the first occurrence of a placeholder comment or specific marker with the Support URL
         # Assuming there's a specific comment or identifiable pattern to insert the link
@@ -392,16 +395,16 @@ replace_placeholders() {
         # Example: Replace the first 'href=""' with the INSTRUCTION_URL
         sed -i "s|href=\"\"|href=\"$INSTRUCTION_URL\"|g" "$SUBSCRIPTION_HTML"
 
-        echo_info "Inserted Support and Instruction URLs successfully."
+        colorized_echo blue "Inserted Support and Instruction URLs successfully."
     else
-        echo_error "File $SUBSCRIPTION_HTML does not exist. Skipping link insertion."
+        colorized_echo red "File $SUBSCRIPTION_HTML does not exist. Skipping link insertion."
     fi
 
-    echo_info "All placeholder replacements completed successfully."
+    colorized_echo blue "All placeholder replacements completed successfully."
 }
 
 chmod_scripts() {
-    echo_info "Changing permissions for scripts..."
+    colorized_echo blue "Changing permissions for scripts..."
     cd ~/services
     chmod +x *.sh
 }
