@@ -1,6 +1,6 @@
 services:
   marzban:
-    image: gozargah/marzban
+    image: gozargah/marzban:latest
     container_name: marzban
     restart: unless-stopped
     env_file: ./marzban/.env
