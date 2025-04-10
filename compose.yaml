@@ -16,7 +16,6 @@ services:
       - ./marzban/xray_config.json:/code/xray_config.json # xray core config
       - ./marzban/db.sqlite3:/code/db.sqlite3 # users DB
       - ./marzban/templates:/code/templates # templates for sub and pages
-      - ./marzban/singbox.py:/code/app/subscription/singbox.py
 
   nginx:
     image: nginx:latest
