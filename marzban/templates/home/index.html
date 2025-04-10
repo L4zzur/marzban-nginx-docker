@@ -4,11 +4,11 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Random Cat Images</title>
-    <link rel="icon" href="https://cataas.com/cat?filter=mono&type=square" type="image/png">
+    <title>Random Fox Images</title>
+    <link rel="icon" href="https://randomfox.ca/images/1.jpg" type="image/png">
     <style>
       body {
-        background: #5c4531;
+        background: #4a593d; /* Более зеленый фон для лесной тематики */
         color: #f4e3c1;
         font-family: Arial, sans-serif;
       }
@@ -17,21 +17,20 @@
         text-align: center;
       }
 
-      .cats {
+      .foxes {
         display: grid;
-        grid-template-columns: repeat(5, 1fr);
-        grid-template-rows: repeat(5, 1fr);
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
         gap: 20px;
         padding: 20px;
       }
 
-      .random_cat {
+      .random_fox {
         width: 100%;
         height: 320px;
-        border: 5px solid #7a4e2d;
+        border: 5px solid #5e7a2d;
         padding: 10px;
         box-sizing: border-box;
-        background: #8b5e3c;
+        background: #6b8b3c;
         border-radius: 10px;
         display: flex;
         flex-direction: column;
@@ -43,7 +42,7 @@
         width: 100%;
         height: 80%;
         object-fit: cover;
-        border: 2px solid #5a3e2b;
+        border: 2px solid #3e5a2b;
         border-radius: 5px;
       }
 
@@ -53,85 +52,126 @@
         text-align: center;
         color: #f9d8a7;
       }
+
+      .loading {
+        text-align: center;
+        font-size: 1.5rem;
+        padding: 20px;
+      }
+
+      /* Добавляем адаптивность */
+      @media (max-width: 1200px) {
+        .foxes {
+          grid-template-columns: repeat(3, 1fr);
+        }
+      }
+
+      @media (max-width: 768px) {
+        .foxes {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+
+      @media (max-width: 480px) {
+        .foxes {
+          grid-template-columns: 1fr;
+        }
+      }
     </style>
   </head>
   <body>
     <header class="header-content">
-      <h1>Welcome to the Random Cat Gallery</h1>
+      <h1>Welcome to the Random Fox Gallery</h1>
     </header>
-    <div class="container"></div>
+    <div class="container">
+      <div class="loading">Loading foxes...</div>
+    </div>
 
     <script>
-      const url = "https://cataas.com/api/cats?skip=0&limit=25";
       const section = document.querySelector(".container");
       const captions = [
-        "You're pawsome!",
-        "Have a purr-fect day!",
-        "Keep calm and love cats!",
-        "Feeling feline fine!",
-        "Just a little meow-ment of joy!",
-        "Paws and reflect!",
-        "You're the cat's whiskers!",
-        "Live long and paw-sper!",
-        "Cat-titude is everything!",
-        "Meowgical moments!",
-        "The fluffiest friend!",
-        "Stay pawsitive!",
-        "You had me at meow!",
-        "A meow-tastic day!",
-        "Cuteness overload!",
-        "Born to be wild... and fluffy!",
-        "Purr-haps the cutest!",
-        "Love at first meow!",
-        "Whisker wonders!",
-        "Purring just for you!",
-        "Stay curious!",
-        "The purr-fect companion!",
-        "Catch the catitude!",
-        "Pawsitively adorable!",
-        "Furry and fabulous!"
+        "What does the fox say?",
+        "Foxy and I know it!",
+        "Wild and free!",
+        "Clever as a fox!",
+        "Fox on the run!",
+        "Fantastic Mr. Fox!",
+        "Sly and cunning!",
+        "Orange is the new cute!",
+        "Fox-tastic day!",
+        "Outfoxing everyone!",
+        "Foxy vibes only!",
+        "Wilderness explorer!",
+        "Forest friend!",
+        "Bushy tail, don't care!",
+        "Swift like a fox!",
+        "Born to be wild!",
+        "Forest guardian!",
+        "Rusty and beautiful!",
+        "Woodland wonder!",
+        "Foxy and fabulous!",
+        "Nature's trickster!",
+        "Curious and clever!",
+        "Fox in the spotlight!",
+        "Absolutely fox-tastic!",
+        "Furry and fantastic!"
       ];
 
-      randomCatPhoto = (json) => {
-        section.classList.add("cats");
+      // Максимальное количество лис в API (на момент создания кода)
+      const MAX_FOXES = 123;
 
-        json.forEach((cat, index) => {
-          let photo = `https://cataas.com/cat/${cat._id}`;
+      function getRandomFoxIds(count) {
+        const ids = new Set();
+        while(ids.size < count) {
+          ids.add(Math.floor(Math.random() * MAX_FOXES) + 1);
+        }
+        return Array.from(ids);
+      }
+
+      function displayFoxes(foxIds) {
+        section.innerHTML = "";
+        section.classList.add("foxes");
+
+        foxIds.forEach((id, index) => {
+          let photo = `https://randomfox.ca/images/${id}.jpg`;
 
           let imageContainer = document.createElement("div");
-          imageContainer.classList.add("random_cat");
-
+          imageContainer.classList.add("random_fox");
           
-
           let image = document.createElement("img");
           image.src = photo;
-          image.alt = "Random Cat";
+          image.alt = "Random Fox";
+          
+          // Добавляем обработчик ошибок загрузки изображений
+          image.onerror = function() {
+            image.src = "https://randomfox.ca/images/1.jpg"; // Запасное изображение
+            image.alt = "Fox image not available";
+          };
 
           let caption = document.createElement("div");
           caption.classList.add("caption");
-          caption.textContent = captions[index % captions.length];
+          const randomCaptionIndex = Math.floor(Math.random() * captions.length);
+          caption.textContent = captions[randomCaptionIndex];
 
           imageContainer.appendChild(image);
           imageContainer.appendChild(caption);
           section.appendChild(imageContainer);
         });
-      };
+      }
 
-      async function getRandomCats() {
-        section.innerHTML = "";
+      async function getRandomFoxes() {
         try {
-          const response = await fetch(url);
-          const json = await response.json();
-          console.log("JSON:", json);
-          randomCatPhoto(json);
+          // Получаем 30 случайных ID лис
+          const foxIds = getRandomFoxIds(30);
+          displayFoxes(foxIds);
         } catch (e) {
-          console.log("This is an error");
-          console.log(e);
+          console.error("Error loading foxes:", e);
+          section.innerHTML = "<div class='loading'>Failed to load foxes. Please try again later.</div>";
         }
       }
 
-      // Load multiple cat images on page load
-      window.addEventListener("load", getRandomCats);
+      // Load multiple fox images on page load
+      window.addEventListener("load", getRandomFoxes);
     </script>
   </body>
 </html>
