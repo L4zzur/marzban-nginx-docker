@@ -1,10 +1,10 @@
 {
     "log": {
-        "loglevel": "error",
-        "error": "/usr/local/share/xray/error.log"
+        "loglevel": "warn",
+        "error": "/var/log/xray/error.log"
     },
     "routing": {
-        "domainStrategy": "IPIfNonMatch",
+        "domainStrategy": "AsIs",
         "rules": [
             {
                 "type": "field",
@@ -17,23 +17,13 @@
                     "geoip:ru"
                 ],
                 "outboundTag": "block"
-            },
-            {
-                "type": "field",
-                "domain": [
-                    "geosite:category-ru",
-                    "geosite:category-gov-ru",
-                    "geosite:mailru",
-                    "geosite:yandex",
-                    "geosite:vk"
-                ],
-                "outboundTag": "block"
             }
         ]
     },
     "dns": {
         "servers": [
-            "8.8.8.8"
+            "1.1.1.1",
+            "2606:4700:4700::1111"
         ]
     },
     "inbounds": [
@@ -48,7 +38,7 @@
                 "fallbacks": [
                     {
                         "dest": "nginx:443",
-                        "xver": 1
+                        "xver": 2
                     }
                 ]
             },
@@ -89,8 +79,7 @@
             "protocol": "freedom",
             "tag": "webserver",
             "settings": {
-                "redirect": "127.0.0.1:443",
-                "proxy_protocol": 0
+                "redirect": "marzban:443"
             }
         }
     ],
