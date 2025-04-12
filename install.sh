@@ -112,57 +112,84 @@ check_dependencies() {
         colorized_echo blue "wget not found. Installing..."
         install_package wget
     fi
-    if ! command -v colorized_echo >/dev/null 2>&1; then
-        colorized_echo blue "colorized_echo not found. Installing..."
-        install_package colorized_echo
-    fi
 }
 
-# Function to get user input
+# Function to get user input for domain and path configuration
 get_user_input() {
     read -p "Enter your email for acme.sh (e.g., my@example.com): " ACME_EMAIL
     read -p "Enter your Cloudflare API Key: " CF_API_KEY
     read -p "Enter your Cloudflare Email: " CF_EMAIL
     read -p "Enter your domain (e.g., example.com): " DOMAIN
 
+    # Make sure domain doesn't have "http://" or "https://" prefix
+    DOMAIN=$(echo "$DOMAIN" | sed 's#^https?://##')
+    # Remove trailing slash if present
+    DOMAIN=${DOMAIN%/}
+
     # Prompt for subdomains
-    read -p "Enter your 'panel' subdomain (e.g., panel): " PANEL_SUBDOMAIN
+    read -p "Enter your 'panel' subdomain (default: panel): " PANEL_SUBDOMAIN
     PANEL_SUBDOMAIN=${PANEL_SUBDOMAIN:-panel}  # Default to 'panel' if empty
 
-    read -p "Enter your 'sub' subdomain (e.g., sub): " SUB_SUBDOMAIN
+    read -p "Enter your 'sub' subdomain (default: sub): " SUB_SUBDOMAIN
     SUB_SUBDOMAIN=${SUB_SUBDOMAIN:-sub}        # Default to 'sub' if empty
 
-    # Prompt for location path
-    read -p "Enter the Nginx location path for subscription (e.g., /user/): " LOCATION_PATH
-    LOCATION_PATH=${LOCATION_PATH:-/user/}     # Default to '/user/' if empty
+    # Prompt for paths without slashes
+    read -p "Enter the location path for subscription without slashes (default: user): " LOCATION_PATH
+    LOCATION_PATH=${LOCATION_PATH:-user}     # Default to 'user' if empty
 
-    # Process LOCATION_PATH to derive XRAY_SUBSCRIPTION_PATH without slashes
-    # Remove leading and trailing slashes
-    XRAY_SUBSCRIPTION_PATH="${LOCATION_PATH#/}"
-    XRAY_SUBSCRIPTION_PATH="${XRAY_SUBSCRIPTION_PATH%/}"
+    read -p "Enter the location path for dashboard without slashes (default: dashboard): " DASHBOARD_PATH
+    DASHBOARD_PATH=${DASHBOARD_PATH:-dashboard}     # Default to 'dashboard' if empty
+
+    # Add slashes for dashboard path only
+    DASHBOARD_PATH="/${DASHBOARD_PATH}/"
+
+    # Set XRAY_SUBSCRIPTION_PATH to the same value as LOCATION_PATH
+    XRAY_SUBSCRIPTION_PATH="$LOCATION_PATH"
+
+    # Prompt for optional Support and Instruction URLs
+    read -p "Enter the Support URL (optional, press Enter to skip): " SUPPORT_URL
+    read -p "Enter the Instruction URL (optional, press Enter to skip): " INSTRUCTION_URL
+
+    # Prompt for VPN name to replace 'Template VPN'
+    read -p "Enter the name of your VPN service (default: Template VPN): " VPN_NAME
+    VPN_NAME=${VPN_NAME:-"Template VPN"}  # Default to 'Template VPN' if empty
 
     # Prompt for Support and Instruction URLs
     read -p "Enter the Support URL (e.g., https://t.me/your_support): " SUPPORT_URL
     read -p "Enter the Instruction URL (e.g., https://yourdomain.com/instruction): " INSTRUCTION_URL
 
-    # Prompt for SUDO_USERNAME and SUDO_PASSWORD
-    read -p "Enter desired SUDO_USERNAME (default: admin): " SUDO_USERNAME
-    SUDO_USERNAME=${SUDO_USERNAME:-admin}
-
-    read -sp "Enter desired SUDO_PASSWORD: " SUDO_PASSWORD
     echo
+
+    # Display summary of inputs for confirmation
+    colorized_echo blue "Summary of your inputs:"
+    colorized_echo blue "Domain: $DOMAIN"
+    colorized_echo blue "Panel Subdomain: $PANEL_SUBDOMAIN.$DOMAIN"
+    colorized_echo blue "Subscription Subdomain: $SUB_SUBDOMAIN.$DOMAIN"
+    colorized_echo blue "Subscription Path: $LOCATION_PATH (without slashes)"
+    colorized_echo blue "Dashboard Path: $DASHBOARD_PATH"
+    colorized_echo blue "VPN Name: $VPN_NAME"
+
+    # Ask for confirmation
+    read -p "Is this information correct? (y/n): " confirm
+    if [[ $confirm != "y" && $confirm != "Y" ]]; then
+        colorized_echo yellow "Setup cancelled. Please run the script again."
+        exit 1
+    fi
 }
 
 # Function to clone the repository
 clone_repository() {
-    colorized_echo blue "Cloning marzban-nginx-docker repository into ~/services..."
+    read -p "Enter the name of the directory to clone into (leave empty for default 'marzban-nginx-docker'): " REPO_DIR
+    REPO_DIR=${REPO_DIR:-marzban-nginx-docker}  # Default to 'services' if empty
+    
+    colorized_echo blue "Cloning marzban-nginx-docker repository into ~/$REPO_DIR..."
     cd ~
-    if [ -d "services" ]; then
-        colorized_echo blue "Directory 'services' already exists. Skipping clone."
+    if [ -d "$REPO_DIR" ]; then
+        colorized_echo blue "Directory '$REPO_DIR' already exists. Skipping clone."
     else
-        git clone https://github.com/L4zzur/marzban-nginx-docker services
+        git clone https://github.com/L4zzur/marzban-nginx-docker "$REPO_DIR"
     fi
-    cd ~/services
+    cd ~/"$REPO_DIR"
 }
 
 # Function to detect Docker Compose
@@ -320,9 +347,6 @@ replace_placeholders() {
 
         # Replace 'sub.my_domain.com' with 'sub_subdomain.DOMAIN'
         sed -i "s/sub\.my_domain\.com/${SUB_SUBDOMAIN}.${DOMAIN}/g" "$NGINX_CONF"
-
-        # Replace 'my_domain.com' with 'DOMAIN'
-        sed -i "s/my_domain\.com/$DOMAIN/g" "$NGINX_CONF"
 
         # Replace '/sub/' with the user-provided LOCATION_PATH
         # Ensure that LOCATION_PATH starts and ends with '/'
