@@ -267,7 +267,7 @@ EOF
 # Function to set Let's Encrypt as the default CA
 set_default_ca() {
     colorized_echo blue "Setting Let's Encrypt as the default CA..."
-    ~/.acme.sh/acme.sh --set-default-ca --server "$DEFAULT_CA_SERVER" --force
+    ~/.acme.sh/acme.sh --set-default-ca --server "$DEFAULT_CA_SERVER"
 }
 
 # Function to issue a wildcard certificate
@@ -281,7 +281,8 @@ issue_certificate() {
         -d "$DOMAIN" \
         -d "*.$DOMAIN" \
         --key-file ~/"$REPO_DIR"/certs/key.pem \
-        --fullchain-file ~/"$REPO_DIR"/certs/fullchain.pem
+        --fullchain-file ~/"$REPO_DIR"/certs/fullchain.pem \
+        --force
 
     if [ -f ~/"$REPO_DIR"/certs/key.pem ] && [ -f ~/"$REPO_DIR"/certs/fullchain.pem ]; then
         colorized_echo blue "Certificates successfully created and saved in ~/$REPO_DIR/certs/"
