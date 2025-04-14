@@ -101,6 +101,12 @@ install_package () {
 install_docker() {
     colorized_echo blue "Installing Docker..."
     curl -fsSL "$DOCKER_INSTALL_URL" | sh
+    
+    # Add current user to docker group
+    colorized_echo blue "Adding current user to docker group..."
+    sudo groupadd -f docker
+    sudo usermod -aG docker $USER
+    
     colorized_echo blue "Docker installed successfully."
 }
 
@@ -473,6 +479,52 @@ replace_placeholders() {
     fi
 
     colorized_echo blue "All placeholder replacements completed successfully."
+}
+
+# Function to ensure Docker daemon access
+ensure_docker_access() {
+    colorized_echo blue "Ensuring access to Docker daemon..."
+    
+    # Check if user is in docker group
+    if ! groups | grep -q docker; then
+        colorized_echo yellow "Current user is not in the docker group. Adding..."
+        
+        # Create docker group if it doesn't exist
+        sudo groupadd -f docker
+        
+        # Add current user to docker group
+        sudo usermod -aG docker $USER
+        
+        colorized_echo blue "User added to docker group. You may need to log out and log back in for changes to take effect."
+        colorized_echo blue "Alternatively, we can try to apply the changes now..."
+        
+        # Try to apply group changes without logging out
+        newgrp docker << EOF
+            # Continue script execution after newgrp
+            cd ~/"$REPO_DIR"
+            docker compose up -d
+            sleep 10
+            create_admin_user_internal
+            exit
+EOF
+        
+        # Exit script after newgrp completes
+        colorized_echo green "Installation completed successfully!"
+        colorized_echo green "Your Marzban panel is available at: https://${PANEL_SUBDOMAIN}.${DOMAIN}/${DASHBOARD_PATH}"
+        colorized_echo green "Login with the admin credentials you provided."
+        exit 0
+    fi
+    
+    # Check if docker.sock is accessible
+    if [ ! -w /var/run/docker.sock ]; then
+        colorized_echo yellow "Cannot write to /var/run/docker.sock. Adjusting permissions..."
+        
+        # Option 1: Temporary fix (not recommended for production)
+        sudo chmod 666 /var/run/docker.sock
+        
+        # Option 2: Better approach - ensure socket has correct group ownership
+        # sudo chown root:docker /var/run/docker.sock
+    fi
 }
 
 # Function to create admin user using marzban-cli
