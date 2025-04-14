@@ -148,8 +148,9 @@ check_dependencies() {
 # Function to get user input for domain and path configuration
 get_user_input() {
     read -p "Enter your email for acme.sh (e.g., my@example.com): " ACME_EMAIL
+    read -p "Enter your Cloudflare Email (press Enter to use the same as acme.sh email): " CF_EMAIL
+    CF_EMAIL=${CF_EMAIL:-$ACME_EMAIL}  # Use ACME_EMAIL if CF_EMAIL is empty
     read -p "Enter your Cloudflare API Key: " CF_API_KEY
-    read -p "Enter your Cloudflare Email: " CF_EMAIL
     read -p "Enter your domain (e.g., example.com): " DOMAIN
 
     # Make sure domain doesn't have "http://" or "https://" prefix
@@ -244,36 +245,40 @@ setup_account_conf() {
     colorized_echo blue "Setting up ~/.acme.sh/account.conf with Cloudflare API Key and Email..."
     CONFIG_FILE="$HOME/.acme.sh/account.conf"
 
+    # Read current values if file exists
     if [ -f "$CONFIG_FILE" ]; then
-        # Update CF_Key if exists, else append
-        if grep -q "^export CF_Key=" "$CONFIG_FILE"; then
-            sed -i "s/^export CF_Key=.*/export CF_Key=\"$CF_API_KEY\"/" "$CONFIG_FILE"
-            colorized_echo blue "Updated CF_Key in account.conf."
-        else
-            echo "export CF_Key=\"$CF_API_KEY\"" >> "$CONFIG_FILE"
-            colorized_echo blue "Added CF_Key to account.conf."
-        fi
-
-        # Update CF_Email if exists, else append
-        if grep -q "^export CF_Email=" "$CONFIG_FILE"; then
-            sed -i "s/^export CF_Email=.*/export CF_Email=\"$CF_EMAIL\"/" "$CONFIG_FILE"
-            colorized_echo blue "Updated CF_Email in account.conf."
-        else
-            echo "export CF_Email=\"$CF_EMAIL\"" >> "$CONFIG_FILE"
-            colorized_echo blue "Added CF_Email to account.conf."
-        fi
+        CURRENT_CF_KEY=$(grep '^CF_Key=' "$CONFIG_FILE" | head -n1 | cut -d'=' -f2- | tr -d '"')
+        CURRENT_CF_EMAIL=$(grep '^CF_Email=' "$CONFIG_FILE" | head -n1 | cut -d'=' -f2- | tr -d '"')
     else
-        # Create the config file with both variables
-        cat <<EOF > "$CONFIG_FILE"
-CF_Key="$CF_API_KEY"
-CF_Email="$CF_EMAIL"
-EOF
-        colorized_echo blue "Created account.conf with CF_Key and CF_Email."
+        CURRENT_CF_KEY=""
+        CURRENT_CF_EMAIL=""
     fi
 
+    # Ask if user wants to update existing values
+    if [ -n "$CURRENT_CF_KEY" ] || [ -n "$CURRENT_CF_EMAIL" ]; then
+        colorized_echo yellow "Cloudflare credentials already exist in account.conf:"
+        [ -n "$CURRENT_CF_EMAIL" ] && echo "  CF_Email: $CURRENT_CF_EMAIL"
+        [ -n "$CURRENT_CF_KEY" ] && echo "  CF_Key: $CURRENT_CF_KEY"
+        read -p "Do you want to update them? (y/N): " update_cf
+        if [[ ! "$update_cf" =~ ^[Yy]$ ]]; then
+            colorized_echo blue "Keeping existing Cloudflare credentials."
+            return
+        fi
+    fi
+
+    # Remove old lines
+    sed -i '/^CF_Key=/d' "$CONFIG_FILE" 2>/dev/null || true
+    sed -i '/^CF_Email=/d' "$CONFIG_FILE" 2>/dev/null || true
+
+    # Write new values
+    echo "CF_Key=\"$CF_API_KEY\"" >> "$CONFIG_FILE"
+    echo "CF_Email=\"$CF_EMAIL\"" >> "$CONFIG_FILE"
+
     chmod 600 "$CONFIG_FILE"
-    colorized_echo blue "Set permissions for account.conf."
+    colorized_echo blue "Cloudflare credentials updated in account.conf."
 }
+
+
 
 # Function to set Let's Encrypt as the default CA
 set_default_ca() {
@@ -406,7 +411,7 @@ replace_placeholders() {
             echo "XRAY_SUBSCRIPTION_URL_PREFIX=\"$XRAY_SUBSCRIPTION_URL_PREFIX\"" >> "$ENV_FILE"
         fi
 
-        # Replace XRAY_SUBSCRIPTION_PATH (точечная замена)
+        # Replace XRAY_SUBSCRIPTION_PATH
         if grep -q "^XRAY_SUBSCRIPTION_PATH" "$ENV_FILE"; then
             sed -i "s/^XRAY_SUBSCRIPTION_PATH=.*/XRAY_SUBSCRIPTION_PATH=\"$XRAY_SUBSCRIPTION_PATH\"/" "$ENV_FILE"
         else
