@@ -13,9 +13,10 @@ services:
       - ./certs:/etc/ssl/certs:ro # certificates
       - ./xray:/usr/local/share/xray # geo-files
       - ./xray/xray:/usr/local/bin/xray # xray core
-      - ./marzban/xray_config.json:/code/xray_config.json # xray core config
-      - ./marzban/db.sqlite3:/code/db.sqlite3 # users DB
+      - ./xray/error.log:/var/log/xray/error.log
       - ./marzban/templates:/code/templates # templates for sub and pages
+      - ./marzban/db.sqlite3:/code/db.sqlite3 # users DB
+      - ./marzban/xray_config.json:/code/xray_config.json # xray core config
 
   nginx:
     image: nginx:latest
@@ -29,9 +30,10 @@ services:
       default:
         ipv4_address: 172.18.0.3
     volumes:
-      - ./nginx/error.log:/var/log/nginx/error.log
-      - ./nginx/access.log:/var/log/nginx/access.log
+      - ./nginx/logs:/var/log/nginx
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/parts:/etc/nginx/parts:ro
+      - ./nginx/sites-enabled:/etc/nginx/sites-enabled:ro
     command: [nginx-debug, "-g", "daemon off;"]
 
 networks:
