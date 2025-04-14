@@ -267,7 +267,7 @@ EOF
 # Function to set Let's Encrypt as the default CA
 set_default_ca() {
     colorized_echo blue "Setting Let's Encrypt as the default CA..."
-    ~/.acme.sh/acme.sh --set-default-ca --server "$DEFAULT_CA_SERVER"
+    ~/.acme.sh/acme.sh --set-default-ca --server "$DEFAULT_CA_SERVER" --force
 }
 
 # Function to issue a wildcard certificate
