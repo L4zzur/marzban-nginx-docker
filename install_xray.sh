@@ -2,7 +2,7 @@
 
 # Inspired by: https://github.com/Gozargah/Marzban-scripts
 
-RELEASE_TAG = "latest"
+RELEASE_TAG="latest"  # Исправлена ошибка с пробелами вокруг знака равенства
 
 # Function to display colorized messages
 colorized_echo() {
@@ -17,7 +17,18 @@ colorized_echo() {
     esac
 }
 
+# Function to download and extract Xray-core
 download_and_extract_xray() {
+    # Check if INSTALL_DIR is provided as an argument
+    if [ -n "$1" ]; then
+        INSTALL_DIR="$1"
+        colorized_echo blue "Using provided installation directory: $INSTALL_DIR"
+    else
+        # Prompt for installation directory
+        read -p "Enter the directory to install Xray-core (leave empty for default '~/marzban-nginx-docker/xray'): " INSTALL_DIR
+        INSTALL_DIR=${INSTALL_DIR:-~/marzban-nginx-docker/xray}
+    fi
+
     colorized_echo blue "Downloading and extracting Xray-core..."
 
     # Determine the architecture
@@ -37,6 +48,9 @@ download_and_extract_xray() {
 
     DOWNLOAD_URL="https://github.com/XTLS/Xray-core/releases/$RELEASE_TAG/download/Xray-linux-$ARCH_SUFFIX.zip"
 
+    # Create the directory if it doesn't exist
+    mkdir -p "$INSTALL_DIR"
+
     # Temporary directory for downloading
     TMP_DIR=$(mktemp -d)
     ZIP_FILE="$TMP_DIR/Xray-linux-$ARCH_SUFFIX.zip"
@@ -49,13 +63,18 @@ download_and_extract_xray() {
         exit 1
     fi
 
-    # Extract Xray-core to services/xray
-    colorized_echo blue "Extracting Xray-core to /xray..."
-    unzip -q "$ZIP_FILE" -d /xray/
+    # Extract Xray-core to the specified directory
+    colorized_echo blue "Extracting Xray-core to $INSTALL_DIR..."
+    unzip -q "$ZIP_FILE" -d "$INSTALL_DIR"
 
     # Clean up
     rm -rf "$TMP_DIR"
-    colorized_echo blue "Xray-core downloaded and extracted successfully."
+    colorized_echo blue "Xray-core downloaded and extracted successfully to $INSTALL_DIR"
 }
 
-download_and_extract_xray
+# Check if argument is provided
+if [ -n "$1" ]; then
+    download_and_extract_xray "$1"
+else
+    download_and_extract_xray
+fi

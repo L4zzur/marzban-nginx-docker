@@ -3,6 +3,20 @@
 
 set -e  # Exit immediately if a command exits with a non-zero status
 
+# Configuration variables
+GITHUB_REPO="https://github.com/L4zzur/marzban-nginx-docker"
+XRAY_DOWNLOAD_URL_BASE="https://github.com/XTLS/Xray-core/releases/latest/download"
+ACME_SH_INSTALL_URL="https://get.acme.sh"
+DEFAULT_CA_SERVER="letsencrypt"
+DOCKER_INSTALL_URL="https://get.docker.com"
+DEFAULT_REPO_DIR="marzban-nginx-docker"
+DEFAULT_PANEL_SUBDOMAIN="panel"
+DEFAULT_SUB_SUBDOMAIN="sub"
+DEFAULT_LOCATION_PATH="user"
+DEFAULT_DASHBOARD_PATH="dashboard"
+DEFAULT_VPN_NAME="Template VPN"
+DEFAULT_ADMIN_USERNAME="admin"
+
 # Function to display colorized messages
 colorized_echo() {
     local color=$1
@@ -86,7 +100,7 @@ install_package () {
 # Function to install Docker
 install_docker() {
     colorized_echo blue "Installing Docker..."
-    curl -fsSL https://get.docker.com | sh
+    curl -fsSL "$DOCKER_INSTALL_URL" | sh
     colorized_echo blue "Docker installed successfully."
 }
 
@@ -127,36 +141,29 @@ get_user_input() {
     DOMAIN=${DOMAIN%/}
 
     # Prompt for subdomains
-    read -p "Enter your 'panel' subdomain (default: panel): " PANEL_SUBDOMAIN
-    PANEL_SUBDOMAIN=${PANEL_SUBDOMAIN:-panel}  # Default to 'panel' if empty
+    read -p "Enter your 'panel' subdomain (leave empty for default '$DEFAULT_PANEL_SUBDOMAIN'): " PANEL_SUBDOMAIN
+    PANEL_SUBDOMAIN=${PANEL_SUBDOMAIN:-$DEFAULT_PANEL_SUBDOMAIN}  # Default to 'panel' if empty
 
-    read -p "Enter your 'sub' subdomain (default: sub): " SUB_SUBDOMAIN
-    SUB_SUBDOMAIN=${SUB_SUBDOMAIN:-sub}        # Default to 'sub' if empty
+    read -p "Enter your 'sub' subdomain (default: '$DEFAULT_SUB_SUBDOMAIN'): " SUB_SUBDOMAIN
+    SUB_SUBDOMAIN=${SUB_SUBDOMAIN:-$DEFAULT_SUB_SUBDOMAIN}        # Default to 'sub' if empty
 
     # Prompt for paths without slashes
-    read -p "Enter the location path for subscription without slashes (default: user): " LOCATION_PATH
-    LOCATION_PATH=${LOCATION_PATH:-user}     # Default to 'user' if empty
+    read -p "Enter the location path for subscription without slashes (default: '$DEFAULT_LOCATION_PATH'): " LOCATION_PATH
+    LOCATION_PATH=${LOCATION_PATH:-$DEFAULT_LOCATION_PATH}     # Default to 'user' if empty
 
-    read -p "Enter the location path for dashboard without slashes (default: dashboard): " DASHBOARD_PATH
-    DASHBOARD_PATH=${DASHBOARD_PATH:-dashboard}     # Default to 'dashboard' if empty
-
-    # Add slashes for dashboard path only
-    DASHBOARD_PATH="/${DASHBOARD_PATH}/"
+    read -p "Enter the location path for dashboard without slashes (default: '$DEFAULT_DASHBOARD_PATH'): " DASHBOARD_PATH
+    DASHBOARD_PATH=${DASHBOARD_PATH:-$DEFAULT_DASHBOARD_PATH}     # Default to 'dashboard' if empty
 
     # Set XRAY_SUBSCRIPTION_PATH to the same value as LOCATION_PATH
     XRAY_SUBSCRIPTION_PATH="$LOCATION_PATH"
 
+    # Prompt for VPN name to replace 'Template VPN'
+    read -p "Enter the name of your VPN service (default: '$DEFAULT_VPN_NAME'): " VPN_NAME
+    VPN_NAME=${VPN_NAME:-$DEFAULT_VPN_NAME}  # Default to 'Template VPN' if empty
+
     # Prompt for optional Support and Instruction URLs
     read -p "Enter the Support URL (optional, press Enter to skip): " SUPPORT_URL
     read -p "Enter the Instruction URL (optional, press Enter to skip): " INSTRUCTION_URL
-
-    # Prompt for VPN name to replace 'Template VPN'
-    read -p "Enter the name of your VPN service (default: Template VPN): " VPN_NAME
-    VPN_NAME=${VPN_NAME:-"Template VPN"}  # Default to 'Template VPN' if empty
-
-    # Prompt for Support and Instruction URLs
-    read -p "Enter the Support URL (e.g., https://t.me/your_support): " SUPPORT_URL
-    read -p "Enter the Instruction URL (e.g., https://yourdomain.com/instruction): " INSTRUCTION_URL
 
     echo
 
@@ -179,15 +186,15 @@ get_user_input() {
 
 # Function to clone the repository
 clone_repository() {
-    read -p "Enter the name of the directory to clone into (leave empty for default 'marzban-nginx-docker'): " REPO_DIR
-    REPO_DIR=${REPO_DIR:-marzban-nginx-docker}  # Default to 'services' if empty
+    read -p "Enter the name of the directory to clone into (leave empty for default '$DEFAULT_REPO_DIR'): " REPO_DIR
+    REPO_DIR=${REPO_DIR:-$DEFAULT_REPO_DIR}  # Default to 'services' if empty
     
     colorized_echo blue "Cloning marzban-nginx-docker repository into ~/$REPO_DIR..."
     cd ~
     if [ -d "$REPO_DIR" ]; then
         colorized_echo blue "Directory '$REPO_DIR' already exists. Skipping clone."
     else
-        git clone https://github.com/L4zzur/marzban-nginx-docker "$REPO_DIR"
+        git clone "$GITHUB_REPO" "$REPO_DIR"
     fi
     cd ~/"$REPO_DIR"
 }
@@ -211,7 +218,7 @@ install_acme_sh() {
     if [ -d "$HOME/.acme.sh" ]; then
         colorized_echo blue "acme.sh is already installed. Skipping installation."
     else
-        curl https://get.acme.sh | sh -s email="$ACME_EMAIL"
+        curl "$ACME_SH_INSTALL_URL" | sh -s email="$ACME_EMAIL"
     fi
 }
 
@@ -254,40 +261,48 @@ EOF
 # Function to set Let's Encrypt as the default CA
 set_default_ca() {
     colorized_echo blue "Setting Let's Encrypt as the default CA..."
-    ~/.acme.sh/acme.sh --set-default-ca --server letsencrypt
+    ~/.acme.sh/acme.sh --set-default-ca --server "$DEFAULT_CA_SERVER"
 }
 
 # Function to issue a wildcard certificate
 issue_certificate() {
     colorized_echo blue "Issuing wildcard certificate for domain $DOMAIN..."
+    
+    # Create certs directory if it doesn't exist
+    mkdir -p ~/"$REPO_DIR"/certs
+    
     ~/.acme.sh/acme.sh --issue --dns dns_cf \
         -d "$DOMAIN" \
         -d "*.$DOMAIN" \
-        --key-file ~/services/certs/key.pem \
-        --fullchain-file ~/services/certs/fullchain.pem
+        --key-file ~/"$REPO_DIR"/certs/key.pem \
+        --fullchain-file ~/"$REPO_DIR"/certs/fullchain.pem
 
-    if [ -f ~/services/certs/key.pem ] && [ -f ~/services/certs/fullchain.pem ]; then
-        colorized_echo blue "Certificates successfully created and saved in ~/services/certs/"
+    if [ -f ~/"$REPO_DIR"/certs/key.pem ] && [ -f ~/"$REPO_DIR"/certs/fullchain.pem ]; then
+        colorized_echo blue "Certificates successfully created and saved in ~/$REPO_DIR/certs/"
     else
         colorized_echo red "Failed to issue certificates. Please check the output above for details."
         exit 1
     fi
 }
 
+
 # Function to download and extract Xray-core
 download_and_extract_xray() {
     colorized_echo blue "Downloading and extracting Xray-core..."
+
+    # Create xray directory if it doesn't exist
+    mkdir -p ~/"$REPO_DIR"/xray
 
     # Determine the architecture
     ARCH=$(uname -m)
     case "$ARCH" in
         x86_64)
             ARCH_SUFFIX="64"
-            DOWNLOAD_URL="https://github.com/XTLS/Xray-core/releases/latest/download/Xray-linux-$ARCH_SUFFIX.zip"
+            DOWNLOAD_URL="$XRAY_DOWNLOAD_URL_BASE/Xray-linux-$ARCH_SUFFIX.zip"
             ;;
         aarch64 | arm64)
             ARCH_SUFFIX="arm64"
-            DOWNLOAD_URL="https://github.com/XTLS/Xray-core/releases/latest/download/Xray-linux-$ARCH_SUFFIX.zip"
+            DOWNLOAD_URL="$XRAY_DOWNLOAD_URL_BASE/Xray-linux-$ARCH_SUFFIX.zip"
             ;;
         *)
             colorized_echo red "Architecture '$ARCH' is not supported. Please download Xray-core manually."
@@ -307,13 +322,21 @@ download_and_extract_xray() {
         exit 1
     fi
 
-    # Extract Xray-core to services/xray
-    colorized_echo blue "Extracting Xray-core to ~/services/xray..."
-    unzip -q "$ZIP_FILE" -d ~/services/xray/
+    # Extract Xray-core to the specified directory
+    colorized_echo blue "Extracting Xray-core to ~/$REPO_DIR/xray..."
+    unzip -q "$ZIP_FILE" -d ~/"$REPO_DIR"/xray/
 
     # Clean up
     rm -rf "$TMP_DIR"
-    colorized_echo blue "Xray-core downloaded and extracted successfully."
+    colorized_echo blue "Xray-core downloaded and extracted successfully to ~/$REPO_DIR/xray"
+    
+    # Verify installation
+    if [ -f ~/"$REPO_DIR"/xray/xray ]; then
+        colorized_echo green "Xray-core installed successfully in ~/$REPO_DIR/xray/"
+    else
+        colorized_echo red "Failed to install Xray-core. Please check the output above for details."
+        exit 1
+    fi
 }
 
 
@@ -466,20 +489,20 @@ create_admin_user() {
     sleep 10
     
     # Prompt for admin username and password
-    read -p "Enter admin username (leave empty for default 'admin'): " ADMIN_USERNAME
-    ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+    read -p "Enter admin username (leave empty for default '$DEFAULT_ADMIN_USERNAME'): " ADMIN_USERNAME
+    ADMIN_USERNAME=${ADMIN_USERNAME:-$DEFAULT_ADMIN_USERNAME}
     
-    read -sp "Enter admin password: " ADMIN_PASSWORD
-    echo
-    read -sp "Confirm admin password: " ADMIN_PASSWORD_CONFIRM
-    echo
+    # read -sp "Enter admin password: " ADMIN_PASSWORD
+    # echo
+    # read -sp "Confirm admin password: " ADMIN_PASSWORD_CONFIRM
+    # echo
     
-    # Check if passwords match
-    if [ "$ADMIN_PASSWORD" != "$ADMIN_PASSWORD_CONFIRM" ]; then
-        colorized_echo red "Passwords do not match. Please try again."
-        create_admin_user
-        return
-    fi
+    # # Check if passwords match
+    # if [ "$ADMIN_PASSWORD" != "$ADMIN_PASSWORD_CONFIRM" ]; then
+    #     colorized_echo red "Passwords do not match. Please try again."
+    #     create_admin_user
+    #     return
+    # fi
     
     # Create admin user
     colorized_echo blue "Creating admin user '$ADMIN_USERNAME'..."
@@ -494,7 +517,7 @@ create_admin_user() {
 
 chmod_scripts() {
     colorized_echo blue "Changing permissions for scripts..."
-    cd ~/services
+    cd ~/"$REPO_DIR"
     chmod +x *.sh
 }
 
