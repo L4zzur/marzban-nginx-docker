@@ -108,6 +108,17 @@ install_docker() {
     sudo usermod -aG docker $USER
     
     colorized_echo blue "Docker installed successfully."
+    colorized_echo yellow "IMPORTANT: You need to log out and log back in for the Docker group changes to take effect."
+    colorized_echo yellow "Please restart your session now and then run this script again."
+    exit 0
+}
+
+# Function to check if the user is in the Docker group
+check_docker_group() {
+    if ! groups | grep -q docker; then
+        colorized_echo yellow "Your user is not in the Docker group. Please restart your session and run this script again."
+        exit 0
+    fi
 }
 
 # Function to check for required dependencies
@@ -566,8 +577,7 @@ create_admin_user() {
     fi
 }
 
-
-
+# Function to change permissions for scripts
 chmod_scripts() {
     colorized_echo blue "Changing permissions for scripts..."
     cd ~/"$REPO_DIR"
@@ -576,6 +586,7 @@ chmod_scripts() {
 
 # Main script execution
 check_dependencies
+check_docker_group
 get_user_input
 clone_repository
 install_acme_sh
