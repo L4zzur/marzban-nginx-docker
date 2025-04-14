@@ -317,118 +317,180 @@ download_and_extract_xray() {
 }
 
 
-# Function to replace various placeholders in configuration files and .env
+# Function to replace various placeholders in all configuration files
 replace_placeholders() {
     colorized_echo blue "Replacing placeholders with provided domain and credentials..."
 
-    # Define the configuration files to modify
-    CONFIG_FILES=(
-        "marzban/templates/singbox/default.json"
-        "marzban/xray_config.json"
-    )
+    # Ensure we're in the repository directory
+    cd ~/"$REPO_DIR"
 
-    # Replace 'my_domain.com' with the actual domain in specified configuration files
-    for file in "${CONFIG_FILES[@]}"; do
-        if [ -f "$file" ]; then
-            colorized_echo blue "Updating $file..."
-            sed -i "s/my_domain\.com/$DOMAIN/g" "$file"
-            colorized_echo blue "Updated $file successfully."
-        else
-            colorized_echo red "File $file does not exist. Skipping."
-        fi
+    # 1. Replace domain in all relevant files
+    colorized_echo blue "Replacing 'my_domain.com' with '$DOMAIN' in all files..."
+    find . -type f -not -path "*/\.*" -exec grep -l "my_domain\.com" {} \; | while read -r file; do
+        colorized_echo blue "Updating domain in $file..."
+        sed -i "s/my_domain\.com/$DOMAIN/g" "$file"
     done
 
-    # Replace 'panel.my_domain.com' and 'sub.my_domain.com' in nginx.conf
-    NGINX_CONF="nginx/nginx.conf"
-    if [ -f "$NGINX_CONF" ]; then
-        colorized_echo blue "Updating nginx.conf with domain-specific entries..."
-        # Replace 'panel.my_domain.com' with 'panel_subdomain.DOMAIN'
-        sed -i "s/panel\.my_domain\.com/${PANEL_SUBDOMAIN}.${DOMAIN}/g" "$NGINX_CONF"
+    # 2. Replace panel subdomain
+    colorized_echo blue "Replacing 'panel.my_domain.com' with '${PANEL_SUBDOMAIN}.${DOMAIN}' in all files..."
+    find . -type f -not -path "*/\.*" -exec grep -l "panel\.my_domain\.com" {} \; | while read -r file; do
+        colorized_echo blue "Updating panel subdomain in $file..."
+        sed -i "s/panel\.my_domain\.com/${PANEL_SUBDOMAIN}.${DOMAIN}/g" "$file"
+    done
 
-        # Replace 'sub.my_domain.com' with 'sub_subdomain.DOMAIN'
-        sed -i "s/sub\.my_domain\.com/${SUB_SUBDOMAIN}.${DOMAIN}/g" "$NGINX_CONF"
+    # 3. Replace sub subdomain
+    colorized_echo blue "Replacing 'sub.my_domain.com' with '${SUB_SUBDOMAIN}.${DOMAIN}' in all files..."
+    find . -type f -not -path "*/\.*" -exec grep -l "sub\.my_domain\.com" {} \; | while read -r file; do
+        colorized_echo blue "Updating sub subdomain in $file..."
+        sed -i "s/sub\.my_domain\.com/${SUB_SUBDOMAIN}.${DOMAIN}/g" "$file"
+    done
 
-        # Replace '/sub/' with the user-provided LOCATION_PATH
-        # Ensure that LOCATION_PATH starts and ends with '/'
-        LOCATION_PATH="${LOCATION_PATH/#\/*/\/}"
-        LOCATION_PATH="${LOCATION_PATH%\/}/"
-        sed -i "s|/sub/|$LOCATION_PATH|g" "$NGINX_CONF"
-
-        colorized_echo blue "nginx.conf updated successfully."
-    else
-        colorized_echo red "nginx.conf not found at $NGINX_CONF. Skipping nginx placeholders replacement."
-    fi
-
-    # Replace placeholders in .env file
+    # 4. Update .env file with specific settings
     ENV_FILE="marzban/.env"
     if [ -f "$ENV_FILE" ]; then
-        colorized_echo blue "Updating .env file with user credentials and subscription paths..."
+        colorized_echo blue "Updating .env file with subscription paths..."
 
-        # Replace SUDO_USERNAME
-        if grep -q "^SUDO_USERNAME=" "$ENV_FILE"; then
-            sed -i "s/^SUDO_USERNAME=.*/SUDO_USERNAME=\"$SUDO_USERNAME\"/" "$ENV_FILE"
-            colorized_echo blue "Updated SUDO_USERNAME in .env."
+        # Replace DASHBOARD_PATH (with slashes)
+        if grep -q "^DASHBOARD_PATH" "$ENV_FILE"; then
+            sed -i "s|^DASHBOARD_PATH=.*|DASHBOARD_PATH=\"/${DASHBOARD_PATH}/\"|" "$ENV_FILE"
         else
-            echo "SUDO_USERNAME=\"$SUDO_USERNAME\"" >> "$ENV_FILE"
-            colorized_echo blue "Added SUDO_USERNAME to .env."
-        fi
-
-        # Replace SUDO_PASSWORD
-        if grep -q "^SUDO_PASSWORD=" "$ENV_FILE"; then
-            sed -i "s/^SUDO_PASSWORD=.*/SUDO_PASSWORD=\"$SUDO_PASSWORD\"/" "$ENV_FILE"
-            colorized_echo blue "Updated SUDO_PASSWORD in .env."
-        else
-            echo "SUDO_PASSWORD=\"$SUDO_PASSWORD\"" >> "$ENV_FILE"
-            colorized_echo blue "Added SUDO_PASSWORD to .env."
+            echo "DASHBOARD_PATH=\"/${DASHBOARD_PATH}/\"" >> "$ENV_FILE"
         fi
 
         # Replace XRAY_SUBSCRIPTION_URL_PREFIX
         XRAY_SUBSCRIPTION_URL_PREFIX="https://${SUB_SUBDOMAIN}.${DOMAIN}"
-        if grep -q "^XRAY_SUBSCRIPTION_URL_PREFIX=" "$ENV_FILE"; then
+        if grep -q "^XRAY_SUBSCRIPTION_URL_PREFIX" "$ENV_FILE"; then
             sed -i "s|^XRAY_SUBSCRIPTION_URL_PREFIX=.*|XRAY_SUBSCRIPTION_URL_PREFIX=\"$XRAY_SUBSCRIPTION_URL_PREFIX\"|" "$ENV_FILE"
-            colorized_echo blue "Updated XRAY_SUBSCRIPTION_URL_PREFIX in .env."
         else
             echo "XRAY_SUBSCRIPTION_URL_PREFIX=\"$XRAY_SUBSCRIPTION_URL_PREFIX\"" >> "$ENV_FILE"
-            colorized_echo blue "Added XRAY_SUBSCRIPTION_URL_PREFIX to .env."
         fi
 
-        # Replace XRAY_SUBSCRIPTION_PATH with LOCATION_PATH without slashes
-        if grep -q "^XRAY_SUBSCRIPTION_PATH=" "$ENV_FILE"; then
+        # Replace XRAY_SUBSCRIPTION_PATH (точечная замена)
+        if grep -q "^XRAY_SUBSCRIPTION_PATH" "$ENV_FILE"; then
             sed -i "s/^XRAY_SUBSCRIPTION_PATH=.*/XRAY_SUBSCRIPTION_PATH=\"$XRAY_SUBSCRIPTION_PATH\"/" "$ENV_FILE"
-            colorized_echo blue "Updated XRAY_SUBSCRIPTION_PATH in .env."
         else
             echo "XRAY_SUBSCRIPTION_PATH=\"$XRAY_SUBSCRIPTION_PATH\"" >> "$ENV_FILE"
-            colorized_echo blue "Added XRAY_SUBSCRIPTION_PATH to .env."
         fi
     else
         colorized_echo red ".env file not found at $ENV_FILE. Skipping .env placeholders replacement."
     fi
 
-    # Insert Support and Instruction URLs into subscription/index.html
+    # 5. Update location path in nginx site config
+    NGINX_SITE="nginx/sites-enabled/sub.my_domain.com.conf"
+    NEW_NGINX_SITE="nginx/sites-enabled/${SUB_SUBDOMAIN}.${DOMAIN}.conf"
+    if [ -f "$NGINX_SITE" ]; then
+        colorized_echo blue "Updating location path in $NGINX_SITE..."
+        sed -i "s|location /user/|location /${LOCATION_PATH}/|g" "$NGINX_SITE"
+        
+        # Rename the file if domain changed
+        if [ "$NGINX_SITE" != "$NEW_NGINX_SITE" ]; then
+            colorized_echo blue "Renaming $NGINX_SITE to $NEW_NGINX_SITE..."
+            mv "$NGINX_SITE" "$NEW_NGINX_SITE"
+        fi
+    else
+        # Check if the file already exists with the new name
+        if [ -f "$NEW_NGINX_SITE" ]; then
+            colorized_echo blue "Updating location path in $NEW_NGINX_SITE..."
+            sed -i "s|location /user/|location /${LOCATION_PATH}/|g" "$NEW_NGINX_SITE"
+        else
+            colorized_echo red "Nginx site config not found. Skipping location path update."
+        fi
+    fi
+
+    # 6. Handle subscription template HTML file
     SUBSCRIPTION_HTML="marzban/templates/subscription/index.html"
     if [ -f "$SUBSCRIPTION_HTML" ]; then
-        colorized_echo blue "Inserting Support and Instruction URLs into $SUBSCRIPTION_HTML..."
+        colorized_echo blue "Updating subscription template in $SUBSCRIPTION_HTML..."
 
-        # Replace the first occurrence of a placeholder comment or specific marker with the Support URL
-        # Assuming there's a specific comment or identifiable pattern to insert the link
-        # For example, replacing '<!-- SUPPORT_LINK -->' with the actual link
-        # If not, adjust the sed command accordingly.
+        # Replace Template VPN with custom VPN name
+        sed -i "s/Template VPN/$VPN_NAME/g" "$SUBSCRIPTION_HTML"
 
-        # Insert Support URL
-        # Example: Replace the first 'href="https://t.me/"' with the SUPPORT_URL
-        sed -i "s|href=\"https://t.me/\"|href=\"$SUPPORT_URL\"|g" "$SUBSCRIPTION_HTML"
+        # Handle optional Support URL
+        if [ -n "$SUPPORT_URL" ]; then
+            # Insert Support URL
+            sed -i "s|href=\"https://t.me/\"|href=\"$SUPPORT_URL\"|" "$SUBSCRIPTION_HTML"
+        else
+            # Remove the Support URL block
+            colorized_echo blue "Removing Support URL block from template..."
+            # Look for the line with the support link and remove the whole <li> tag
+            sed -i '/<li>.*href="https:\/\/t.me\/".*/{:a;N;/<\/li>/!ba;d;}' "$SUBSCRIPTION_HTML"
+        fi
 
-        # Insert Instruction URL
-        # Example: Replace the first 'href=""' with the INSTRUCTION_URL
-        sed -i "s|href=\"\"|href=\"$INSTRUCTION_URL\"|g" "$SUBSCRIPTION_HTML"
-
-        colorized_echo blue "Inserted Support and Instruction URLs successfully."
+        # Handle optional Instruction URL
+        if [ -n "$INSTRUCTION_URL" ]; then
+            # Insert Instruction URL
+            sed -i "s|href=\"\"|href=\"$INSTRUCTION_URL\"|" "$SUBSCRIPTION_HTML"
+        else
+            # Remove the Instruction URL block
+            colorized_echo blue "Removing Instruction URL block from template..."
+            # Look for the line with empty href and remove the whole <li> tag
+            sed -i '/<li>.*href="".*/{:a;N;/<\/li>/!ba;d;}' "$SUBSCRIPTION_HTML"
+        fi
     else
-        colorized_echo red "File $SUBSCRIPTION_HTML does not exist. Skipping link insertion."
+        colorized_echo red "File $SUBSCRIPTION_HTML does not exist. Skipping subscription template updates."
+    fi
+
+    # 7. Update site configuration files names if they exist
+    colorized_echo blue "Checking for files that need renaming..."
+    
+    # Check for panel.my_domain.com.conf
+    OLD_PANEL_CONF="nginx/sites-enabled/panel.my_domain.com.conf"
+    NEW_PANEL_CONF="nginx/sites-enabled/${PANEL_SUBDOMAIN}.${DOMAIN}.conf"
+    if [ -f "$OLD_PANEL_CONF" ] && [ "$OLD_PANEL_CONF" != "$NEW_PANEL_CONF" ]; then
+        colorized_echo blue "Renaming $OLD_PANEL_CONF to $NEW_PANEL_CONF..."
+        mv "$OLD_PANEL_CONF" "$NEW_PANEL_CONF"
+    fi
+    
+    # Check for my_domain.com.conf
+    OLD_DOMAIN_CONF="nginx/sites-enabled/my_domain.com.conf"
+    NEW_DOMAIN_CONF="nginx/sites-enabled/${DOMAIN}.conf"
+    if [ -f "$OLD_DOMAIN_CONF" ] && [ "$OLD_DOMAIN_CONF" != "$NEW_DOMAIN_CONF" ]; then
+        colorized_echo blue "Renaming $OLD_DOMAIN_CONF to $NEW_DOMAIN_CONF..."
+        mv "$OLD_DOMAIN_CONF" "$NEW_DOMAIN_CONF"
     fi
 
     colorized_echo blue "All placeholder replacements completed successfully."
 }
+
+# Function to create admin user using marzban-cli
+create_admin_user() {
+    colorized_echo blue "Creating admin user..."
+    
+    # Start the services
+    colorized_echo blue "Starting services..."
+    cd ~/"$REPO_DIR"
+    docker compose up -d
+    
+    # Wait for services to be ready
+    colorized_echo blue "Waiting for services to be ready..."
+    sleep 10
+    
+    # Prompt for admin username and password
+    read -p "Enter admin username (leave empty for default 'admin'): " ADMIN_USERNAME
+    ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+    
+    read -sp "Enter admin password: " ADMIN_PASSWORD
+    echo
+    read -sp "Confirm admin password: " ADMIN_PASSWORD_CONFIRM
+    echo
+    
+    # Check if passwords match
+    if [ "$ADMIN_PASSWORD" != "$ADMIN_PASSWORD_CONFIRM" ]; then
+        colorized_echo red "Passwords do not match. Please try again."
+        create_admin_user
+        return
+    fi
+    
+    # Create admin user
+    colorized_echo blue "Creating admin user '$ADMIN_USERNAME'..."
+    if docker compose exec marzban marzban-cli admin create --username "$ADMIN_USERNAME" --sudo; then
+        colorized_echo green "Admin user '$ADMIN_USERNAME' created successfully."
+    else
+        colorized_echo red "Failed to create admin user. Please check the output above for details."
+    fi
+}
+
+
 
 chmod_scripts() {
     colorized_echo blue "Changing permissions for scripts..."
@@ -436,6 +498,7 @@ chmod_scripts() {
     chmod +x *.sh
 }
 
+# Main script execution
 check_dependencies
 get_user_input
 clone_repository
@@ -446,3 +509,8 @@ issue_certificate
 download_and_extract_xray
 replace_placeholders
 chmod_scripts
+create_admin_user
+
+colorized_echo green "Installation completed successfully!"
+colorized_echo green "Your Marzban panel is available at: https://${PANEL_SUBDOMAIN}.${DOMAIN}/${DASHBOARD_PATH}"
+colorized_echo green "Login with the admin credentials you provided."
