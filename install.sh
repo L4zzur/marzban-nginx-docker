@@ -452,25 +452,25 @@ replace_placeholders() {
         sed -i "s/Template VPN/$VPN_NAME/g" "$SUBSCRIPTION_HTML"
 
         # Handle optional Support URL
-        if [ -n "$SUPPORT_URL" ]; then
-            # Insert Support URL
-            sed -i "s|href=\"https://t.me/\"|href=\"$SUPPORT_URL\"|" "$SUBSCRIPTION_HTML"
-        else
+        if [ -z "$SUPPORT_URL" ] || [ "$SUPPORT_URL" = "" ]; then
             # Remove the Support URL block
             colorized_echo blue "Removing Support URL block from template..."
             # Look for the line with the support link and remove the whole <li> tag
             sed -i '/<li>.*href="https:\/\/t.me\/".*/{:a;N;/<\/li>/!ba;d;}' "$SUBSCRIPTION_HTML"
+        else
+            # Insert Support URL
+            sed -i "s|href=\"https://t.me/\"|href=\"$SUPPORT_URL\"|" "$SUBSCRIPTION_HTML"
         fi
 
         # Handle optional Instruction URL
-        if [ -n "$INSTRUCTION_URL" ]; then
-            # Insert Instruction URL
-            sed -i "s|href=\"\"|href=\"$INSTRUCTION_URL\"|" "$SUBSCRIPTION_HTML"
-        else
+        if [ -z "$INSTRUCTION_URL" ] || [ "$INSTRUCTION_URL" = "" ]; then
             # Remove the Instruction URL block
             colorized_echo blue "Removing Instruction URL block from template..."
             # Look for the line with empty href and remove the whole <li> tag
             sed -i '/<li>.*href="".*/{:a;N;/<\/li>/!ba;d;}' "$SUBSCRIPTION_HTML"
+        else
+            # Insert Instruction URL
+            sed -i "s|href=\"\"|href=\"$INSTRUCTION_URL\"|" "$SUBSCRIPTION_HTML"
         fi
     else
         colorized_echo red "File $SUBSCRIPTION_HTML does not exist. Skipping subscription template updates."
