@@ -370,25 +370,25 @@ replace_placeholders() {
     # Ensure we're in the repository directory
     cd ~/"$REPO_DIR"
 
-    # 1. Replace domain in all relevant files
-    colorized_echo blue "Replacing 'my_domain.com' with '$DOMAIN' in all files..."
-    find . -type f -not -path "*/\.*" -exec grep -l "my_domain\.com" {} \; | while read -r file; do
-        colorized_echo blue "Updating domain in $file..."
-        sed -i "s/my_domain\.com/$DOMAIN/g" "$file"
-    done
-
-    # 2. Replace panel subdomain
+    # 1. Replace panel subdomain
     colorized_echo blue "Replacing 'panel.my_domain.com' with '${PANEL_SUBDOMAIN}.${DOMAIN}' in all files..."
     find . -type f -not -path "*/\.*" -exec grep -l "panel\.my_domain\.com" {} \; | while read -r file; do
         colorized_echo blue "Updating panel subdomain in $file..."
         sed -i "s/panel\.my_domain\.com/${PANEL_SUBDOMAIN}.${DOMAIN}/g" "$file"
     done
 
-    # 3. Replace sub subdomain
+    # 2. Replace sub subdomain
     colorized_echo blue "Replacing 'sub.my_domain.com' with '${SUB_SUBDOMAIN}.${DOMAIN}' in all files..."
     find . -type f -not -path "*/\.*" -exec grep -l "sub\.my_domain\.com" {} \; | while read -r file; do
         colorized_echo blue "Updating sub subdomain in $file..."
         sed -i "s/sub\.my_domain\.com/${SUB_SUBDOMAIN}.${DOMAIN}/g" "$file"
+    done
+
+    # 3. Replace domain in all relevant files
+    colorized_echo blue "Replacing 'my_domain.com' with '$DOMAIN' in all files..."
+    find . -type f -not -path "*/\.*" -exec grep -l "my_domain\.com" {} \; | while read -r file; do
+        colorized_echo blue "Updating domain in $file..."
+        sed -i "s/my_domain\.com/$DOMAIN/g" "$file"
     done
 
     # 4. Update .env file with specific settings
