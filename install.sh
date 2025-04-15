@@ -279,7 +279,6 @@ setup_account_conf() {
 }
 
 
-
 # Function to set Let's Encrypt as the default CA
 set_default_ca() {
     colorized_echo blue "Setting Let's Encrypt as the default CA..."
@@ -288,23 +287,33 @@ set_default_ca() {
 
 # Function to issue a wildcard certificate
 issue_certificate() {
-    colorized_echo blue "Issuing wildcard certificate for domain $DOMAIN..."
-    
-    # Create certs directory if it doesn't exist
-    mkdir -p ~/"$REPO_DIR"/certs
-    
-    ~/.acme.sh/acme.sh --issue --dns dns_cf \
-        -d "$DOMAIN" \
-        -d "*.$DOMAIN" \
-        --key-file ~/"$REPO_DIR"/certs/key.pem \
-        --fullchain-file ~/"$REPO_DIR"/certs/fullchain.pem \
-        --force
+    colorized_echo blue "Do you want to create a wildcard SSL certificate for your domain? (y/n)"
+    read -p "Your choice: " create_cert
 
-    if [ -f ~/"$REPO_DIR"/certs/key.pem ] && [ -f ~/"$REPO_DIR"/certs/fullchain.pem ]; then
-        colorized_echo blue "Certificates successfully created and saved in ~/$REPO_DIR/certs/"
+    if [[ "$create_cert" =~ ^[Yy]$ ]]; then
+        colorized_echo blue "Issuing wildcard certificate for domain $DOMAIN..."
+
+        # Create certs directory if it doesn't exist
+        mkdir -p ~/"$REPO_DIR"/certs
+
+        ~/.acme.sh/acme.sh --issue --dns dns_cf \
+            -d "$DOMAIN" \
+            -d "*.$DOMAIN" \
+            --key-file ~/"$REPO_DIR"/certs/key.pem \
+            --fullchain-file ~/"$REPO_DIR"/certs/fullchain.pem \
+            --force
+
+        if [ -f ~/"$REPO_DIR"/certs/key.pem ] && [ -f ~/"$REPO_DIR"/certs/fullchain.pem ]; then
+            colorized_echo green "Certificates successfully created and saved in ~/$REPO_DIR/certs/"
+        else
+            colorized_echo red "Failed to issue certificates. Please check the output above for details."
+            exit 1
+        fi
     else
-        colorized_echo red "Failed to issue certificates. Please check the output above for details."
-        exit 1
+        colorized_echo yellow "You chose not to create a wildcard SSL certificate."
+        colorized_echo yellow "Please ensure you have your  wildcard SSL certificate files."
+        colorized_echo yellow "The private key file must be named 'key.pem' and located at: ~/$REPO_DIR/certs/key.pem"
+        colorized_echo yellow "The fullchain file must be named 'fullchain.pem' and located at: ~/$REPO_DIR/certs/fullchain.pem"
     fi
 }
 
