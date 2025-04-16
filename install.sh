@@ -570,18 +570,6 @@ create_admin_user() {
     read -p "Enter admin username (leave empty for default '$DEFAULT_ADMIN_USERNAME'): " ADMIN_USERNAME
     ADMIN_USERNAME=${ADMIN_USERNAME:-$DEFAULT_ADMIN_USERNAME}
     
-    # read -sp "Enter admin password: " ADMIN_PASSWORD
-    # echo
-    # read -sp "Confirm admin password: " ADMIN_PASSWORD_CONFIRM
-    # echo
-    
-    # # Check if passwords match
-    # if [ "$ADMIN_PASSWORD" != "$ADMIN_PASSWORD_CONFIRM" ]; then
-    #     colorized_echo red "Passwords do not match. Please try again."
-    #     create_admin_user
-    #     return
-    # fi
-    
     # Create admin user
     colorized_echo blue "Creating admin user '$ADMIN_USERNAME'..."
     if docker compose exec marzban marzban-cli admin create --username "$ADMIN_USERNAME" --sudo; then
